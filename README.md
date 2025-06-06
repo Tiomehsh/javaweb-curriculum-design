@@ -9,104 +9,22 @@
 - **前端**: JSP, JavaScript, CSS
 - **数据库**: PostgreSQL (兼容OpenGauss)
 - **构建工具**: Maven
-- **应用服务器**: Tomcat 10.1+
+- **应用服务器**: Tomcat 11.0+
 - **反向代理**: Caddy
 
-## 快速开始
+## 功能特性
 
-### 1. 环境要求
-- Java 21+ (推荐Java 23)
-- Maven 3.8+
-- PostgreSQL 或 OpenGauss 数据库
+### 公共功能
+- 在线预约接待
+- 预约查询
+- 二维码生成
 
-### 2. 本地开发
-```bash
-# 克隆项目
-git clone https://github.com/Tiomehsh/javaweb-curriculum-design.git
-cd javaweb-curriculum-design
-
-# 配置数据库连接（推荐使用环境变量）
-cp .env.example .env
-# 编辑.env文件，填入实际数据库配置
-
-# 或者使用传统properties文件配置
-cp src/main/resources/database.properties.example src/main/resources/database.properties
-cp src/main/resources/crypto.properties.example src/main/resources/crypto.properties
-# 然后编辑这两个文件
-
-# 初始化数据库
-psql -U your_username -d your_database -f init.sql
-
-# 编译和打包
-mvn clean package
-```
-
-**注意**: 应用会优先使用环境变量配置，如果环境变量未设置才会使用properties文件。
-
-### 3. 快速部署脚本
-项目提供了自动化部署脚本，支持三种模式：
-
-```bash
-# 本地部署
-./deploy.sh local
-
-# Docker部署
-./deploy.sh docker
-
-# 生产环境部署
-./deploy.sh production
-```
-
-## 部署指南
-
-详细的部署说明请参考 [部署指南.md](部署指南.md)，包含：
-
-- 服务器环境配置
-- Tomcat和Caddy配置
-- 安全设置
-- 监控和日志
-- 故障排除
-
-## Docker 部署
-
-### 配置外部数据库
-由于项目配置为使用外部数据库，请先配置数据库连接：
-
-```bash
-# 复制环境变量配置文件
-cp .env.example .env
-
-# 编辑 .env 文件，填入您的数据库配置
-nano .env
-```
-
-### 使用Docker Compose
-```bash
-# 启动所有服务
-docker-compose up -d
-
-# 查看服务状态
-docker-compose ps
-
-# 查看日志
-docker-compose logs -f
-
-# 停止服务
-docker-compose down
-```
-
-### 服务端口和访问地址
-- **应用**: http://localhost:8080
-- **Caddy**: http://localhost:80, https://localhost:443
-
-### 访问地址
-- **首页**: http://localhost:8080/ (Docker) 或 https://your-domain.com/ (Caddy)
-- **公共页面**: http://localhost:8080/public/
-- **管理后台**: http://localhost:8080/admin/login.jsp
-
-**注意**:
-- 应用被部署为ROOT应用，访问路径中没有应用名称前缀
-- 此配置使用外部数据库，请确保您的数据库服务器可以从Docker容器访问
+### 管理功能
+- 管理员登录/登出
+- 预约管理
+- 部门管理
+- 系统日志
+- 用户权限管理
 
 ## 项目结构
 
@@ -128,54 +46,147 @@ javaweb-curriculum-design/
 │   │       ├── css/          # 样式文件
 │   │       └── js/           # JavaScript文件
 ├── docker-compose.yml         # Docker编排配置
-├── Dockerfile                 # Docker镜像构建文件
 ├── Caddyfile                 # Caddy配置文件
-├── deploy.sh                 # 自动部署脚本
-├── init.sql                  # 数据库初始化脚本
-└── 部署指南.md               # 详细部署指南
+└── init.sql                  # 数据库初始化脚本
 ```
 
-## 功能特性
+---
 
-### 公共功能
-- 在线预约接待
-- 预约查询
-- 二维码生成
+# 服务器部署指南
 
-### 管理功能
-- 管理员登录/登出
-- 预约管理
-- 部门管理
-- 系统日志
-- 用户权限管理
+## 环境要求
+- Java 23
+- Maven 3.8+
+- Docker & Docker Compose
+- PostgreSQL 或 OpenGauss 数据库
 
-## API 接口
+## 快速部署
 
-### 公共接口
-- `GET /api/departments` - 获取部门列表
-- `POST /api/appointments/public` - 创建公共预约
-- `POST /api/appointments/official` - 创建公务预约
-- `GET /api/appointments/query` - 查询预约信息
+### 1. 安装 Java 23
+```bash
+# 下载并安装 OpenJDK 23
+sudo mkdir -p /opt/java
+cd /tmp
+wget https://download.java.net/java/GA/jdk23/3c5b90190c68498b986a97f276efd28a/37/GPL/openjdk-23_linux-x64_bin.tar.gz
+sudo tar -xzf openjdk-23_linux-x64_bin.tar.gz -C /opt/java
+sudo ln -sf /opt/java/jdk-23 /opt/java/current
 
-### 管理接口 (需要认证)
-- `GET /api/admin/appointments` - 获取预约列表
-- `PUT /api/admin/appointments/{id}` - 更新预约状态
-- `GET /api/admin/logs` - 获取系统日志
-- `POST /api/admin/departments` - 管理部门信息
+# 配置环境变量
+export JAVA_HOME=/opt/java/current
+export PATH=$JAVA_HOME/bin:$PATH
+sudo update-alternatives --install /usr/bin/java java /opt/java/current/bin/java 1
+sudo update-alternatives --install /usr/bin/javac javac /opt/java/current/bin/javac 1
 
-## 安全特性
+# 验证安装
+java -version
+```
 
-- Session管理和超时控制
-- 密码强度验证
-- SQL注入防护
-- XSS防护
-- CSRF防护
-- 管理员权限控制
+### 2. 安装 Maven 和 Docker
+```bash
+# 安装 Maven
+sudo apt update
+sudo apt install maven -y
 
-## 监控和日志
+# 安装 Docker 和 Docker Compose
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo systemctl enable docker
+sudo systemctl start docker
+sudo usermod -aG docker $USER
 
-- 应用日志记录
-- 系统操作日志
-- 访问日志
-- 错误日志
-- 健康检查
+# 安装 Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+```
+
+### 3. 部署应用
+```bash
+# 克隆项目
+git clone https://github.com/Tiomehsh/javaweb-curriculum-design.git
+cd javaweb-curriculum-design
+
+# 配置数据库连接
+cp .env.example .env
+nano .env  # 填入您的数据库配置
+
+# 编译项目
+mvn clean package -DskipTests
+
+# 构建并启动服务
+docker-compose up -d --build
+
+# 查看服务状态
+docker-compose ps
+docker-compose logs -f
+```
+
+### 4. 访问应用
+- **本地访问**: http://服务器IP:8080/
+- **域名访问**: https://your-domain.com/ (配置域名后)
+- **管理后台**: /admin/login.jsp
+
+## 常用命令
+
+### 服务管理
+```bash
+# 停止服务
+docker-compose down
+
+# 重启服务
+docker-compose restart app
+
+# 查看日志
+docker-compose logs -f app
+
+# 更新应用
+git pull
+mvn clean package -DskipTests
+docker-compose up -d
+```
+
+### 故障排除
+```bash
+# 检查应用状态
+curl -I http://localhost:8080/public/
+
+# 查看容器资源使用
+docker stats
+
+# 清理无用镜像
+docker system prune -f
+```
+
+## 数据库配置
+
+在 `.env` 文件中配置数据库连接：
+```env
+# 数据库配置
+DB_HOST=your-database-server-ip
+DB_PORT=5432
+DB_NAME=JAVA_WEB
+DB_USER=your-username
+DB_PASSWORD=your-password
+
+# Java JVM配置
+JAVA_OPTS=-Xms512m -Xmx2048m
+
+# 可选：域名配置
+DOMAIN=your-domain.com
+```
+
+## 安全建议
+
+```bash
+# 配置防火墙
+sudo ufw enable
+sudo ufw allow ssh
+sudo ufw allow 80
+sudo ufw allow 443
+sudo ufw allow 8080
+
+# 定期维护
+sudo apt update && sudo apt upgrade -y
+docker system prune -f
+```
+
+部署完成后，您的 Java Web 应用就可以在服务器上正常运行了！
