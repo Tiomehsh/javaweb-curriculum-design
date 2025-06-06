@@ -1,0 +1,16 @@
+# 数据库配置示例 - 请复制此文件为 database.properties 并填入实际配置
+
+# 数据库连接配置
+jdbc.driver=org.postgresql.Driver
+jdbc.url=jdbc:postgresql://localhost:5432/JAVA_WEB
+jdbc.username=your_username
+jdbc.password=your_password
+
+# 连接池配置
+hikari.poolName=CampusPassPool
+hikari.minimumIdle=5
+hikari.maximumPoolSize=20
+hikari.connectionTimeout=30000
+hikari.idleTimeout=600000
+hikari.maxLifetime=1800000
+hikari.connectionTestQuery=SELECT 1

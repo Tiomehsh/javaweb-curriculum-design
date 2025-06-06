@@ -170,6 +170,12 @@ config/local/
 config/dev/
 config/prod/
 
+# 数据库配置文件（包含敏感信息）
+src/main/resources/database.properties
+
+# 环境变量文件
+.env
+
 # Application logs
 logs/
 *.log.*

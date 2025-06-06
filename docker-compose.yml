@@ -2,40 +2,34 @@ version: '3.8'
 
 services:
   app:
-    build: .
+    image: tomcat:10.1-jdk21
     ports:
       - "8080:8080"
     environment:
-      - JAVA_OPTS=-Xms512m -Xmx2048m
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_NAME=JAVA_WEB
-      - DB_USER=admin
-      - DB_PASSWORD=Admin123
-    depends_on:
-      - db
+      - JAVA_OPTS=${JAVA_OPTS:--Xms512m -Xmx2048m}
+      # 使用外部数据库配置，请根据您的实际数据库服务器修改
+      - DB_HOST=${DB_HOST:-your-db-server}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-JAVA_WEB}
+      - DB_USER=${DB_USER:-your-username}
+      - DB_PASSWORD=${DB_PASSWORD:-your-password}
     volumes:
-      - ./logs:/opt/tomcat/logs
+      - ./logs:/usr/local/tomcat/logs
+      # 挂载WAR文件为ROOT应用
+      - ./target/javaweb-curriculum-design-1.0-SNAPSHOT.war:/usr/local/tomcat/webapps/ROOT.war
+      # 挂载数据库配置文件
+      - ./src/main/resources/database.properties:/usr/local/tomcat/conf/database.properties:ro
     restart: unless-stopped
-
-  db:
-    image: postgres:15
-    environment:
-      - POSTGRES_DB=JAVA_WEB
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=Admin123
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "5432:5432"
-    restart: unless-stopped
+    networks:
+      - app-network
 
   caddy:
     image: caddy:2
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN:-your-domain.com}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
@@ -43,8 +37,13 @@ services:
     depends_on:
       - app
     restart: unless-stopped
+    networks:
+      - app-network
 
 volumes:
-  postgres_data:
   caddy_data:
   caddy_config:
+
+networks:
+  app-network:
+    driver: bridge

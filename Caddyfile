@@ -1,92 +1,26 @@
-# 替换为你的实际域名
-your-domain.com {
-    # 自动HTTPS
-    tls {
-        # 使用Let's Encrypt自动获取SSL证书
-        # 如果需要自定义邮箱，可以添加：
-        # email your-email@example.com
-    }
+# 使用环境变量配置域名，默认为your-domain.com
+{$DOMAIN:your-domain.com} {
+    # 自动HTTPS (自动申请Let's Encrypt证书)
     
-    # 反向代理到Tomcat
+    # 反向代理到应用
     reverse_proxy app:8080
     
     # 启用压缩
     encode gzip
     
-    # 静态文件缓存优化
-    @static {
-        path *.css *.js *.png *.jpg *.jpeg *.gif *.ico *.svg *.woff *.woff2 *.ttf *.eot *.pdf
-    }
-    header @static {
-        Cache-Control "public, max-age=31536000, immutable"
-        Vary "Accept-Encoding"
-    }
-    
-    # API请求不缓存
-    @api {
-        path /api/*
-    }
-    header @api {
-        Cache-Control "no-cache, no-store, must-revalidate"
-        Pragma "no-cache"
-        Expires "0"
-    }
-    
-    # 安全头设置
-    header {
-        # 防止点击劫持
-        X-Frame-Options "SAMEORIGIN"
-        # 防止MIME类型嗅探
-        X-Content-Type-Options "nosniff"
-        # XSS保护
-        X-XSS-Protection "1; mode=block"
-        # 强制HTTPS
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        # 内容安全策略
-        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;"
-        # 隐藏服务器信息
-        -Server
-    }
-    
-    # 请求日志
+    # 访问日志
     log {
         output file /var/log/caddy/access.log
         format json
-        level INFO
-    }
-    
-    # 错误处理
-    handle_errors {
-        @404 {
-            expression {http.error.status_code} == 404
-        }
-        @500 {
-            expression {http.error.status_code} == 500
-        }
-        
-        rewrite @404 /error/404.html
-        rewrite @500 /error/500.html
-        
-        reverse_proxy app:8080
-    }
-    
-    # 健康检查端点
-    handle /health {
-        respond "OK" 200
-    }
-    
-    # 限制请求大小（防止大文件上传攻击）
-    request_body {
-        max_size 10MB
     }
 }
 
 # 重定向www子域名
-www.your-domain.com {
-    redir https://your-domain.com{uri} permanent
+www.{$DOMAIN:your-domain.com} {
+    redir https://{$DOMAIN:your-domain.com}{uri} permanent
 }
 
-# 如果有多个域名，可以添加更多配置
-# another-domain.com {
-#     reverse_proxy app:8080
-# }
+# 本地开发配置
+localhost {
+    reverse_proxy app:8080
+}

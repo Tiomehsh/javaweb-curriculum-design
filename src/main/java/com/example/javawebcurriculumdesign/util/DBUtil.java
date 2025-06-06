@@ -32,49 +32,89 @@ public class DBUtil {
      * 初始化数据源（连接池）
      */
     private static void initDataSource() throws IOException {
-        Properties prop = new Properties();
-        InputStream is = DBUtil.class.getClassLoader().getResourceAsStream(CONFIG_FILE);
-        if (is == null) {
-            throw new IOException("找不到配置文件: " + CONFIG_FILE);
-        }
+        // 创建 HikariCP 配置
+        HikariConfig config = new HikariConfig();
 
-        try {
-            prop.load(is);
+        // 优先从环境变量读取配置，如果不存在则从properties文件读取
+        String dbHost = System.getenv("DB_HOST");
+        String dbPort = System.getenv("DB_PORT");
+        String dbName = System.getenv("DB_NAME");
+        String dbUser = System.getenv("DB_USER");
+        String dbPassword = System.getenv("DB_PASSWORD");
 
-            // 创建 HikariCP 配置
-            HikariConfig config = new HikariConfig();
-
-            // 基本数据库连接配置
-            config.setDriverClassName(prop.getProperty("jdbc.driver"));
-            config.setJdbcUrl(prop.getProperty("jdbc.url"));
-            config.setUsername(prop.getProperty("jdbc.username"));
-            config.setPassword(prop.getProperty("jdbc.password"));
-
-            // 连接池配置
-            config.setPoolName(prop.getProperty("hikari.poolName", "CampusPassPool"));
-            config.setMinimumIdle(Integer.parseInt(prop.getProperty("hikari.minimumIdle", "5")));
-            config.setMaximumPoolSize(Integer.parseInt(prop.getProperty("hikari.maximumPoolSize", "20")));
-            config.setConnectionTimeout(Long.parseLong(prop.getProperty("hikari.connectionTimeout", "30000")));
-            config.setIdleTimeout(Long.parseLong(prop.getProperty("hikari.idleTimeout", "600000")));
-            config.setMaxLifetime(Long.parseLong(prop.getProperty("hikari.maxLifetime", "1800000")));
-            config.setConnectionTestQuery(prop.getProperty("hikari.connectionTestQuery", "SELECT 1"));
-
-            // 创建数据源
-            dataSource = new HikariDataSource(config);
-
+        if (dbHost != null && dbPort != null && dbName != null && dbUser != null && dbPassword != null) {
+            // 使用环境变量配置
+            System.out.println("使用环境变量配置数据库连接");
+            
+            config.setDriverClassName("org.postgresql.Driver");
+            config.setJdbcUrl("jdbc:postgresql://" + dbHost + ":" + dbPort + "/" + dbName);
+            config.setUsername(dbUser);
+            config.setPassword(dbPassword);
+            
+            // 连接池默认配置
+            config.setPoolName("CampusPassPool");
+            config.setMinimumIdle(5);
+            config.setMaximumPoolSize(20);
+            config.setConnectionTimeout(30000);
+            config.setIdleTimeout(600000);
+            config.setMaxLifetime(1800000);
+            config.setConnectionTestQuery("SELECT 1");
+            
             System.out.println("========== 数据库连接池配置信息 ==========");
-            System.out.println("驱动: " + prop.getProperty("jdbc.driver"));
-            System.out.println("URL: " + prop.getProperty("jdbc.url"));
-            System.out.println("用户名: " + prop.getProperty("jdbc.username"));
+            System.out.println("配置来源: 环境变量");
+            System.out.println("驱动: org.postgresql.Driver");
+            System.out.println("URL: jdbc:postgresql://" + dbHost + ":" + dbPort + "/" + dbName);
+            System.out.println("用户名: " + dbUser);
             System.out.println("连接池名称: " + config.getPoolName());
             System.out.println("最小空闲连接数: " + config.getMinimumIdle());
             System.out.println("最大连接池大小: " + config.getMaximumPoolSize());
             System.out.println("=========================================");
-        } finally {
-            if (is != null) {
-                is.close();
+        } else {
+            // 回退到properties文件配置
+            System.out.println("环境变量未配置，使用properties文件配置数据库连接");
+            
+            Properties prop = new Properties();
+            InputStream is = DBUtil.class.getClassLoader().getResourceAsStream(CONFIG_FILE);
+            if (is == null) {
+                throw new IOException("找不到配置文件: " + CONFIG_FILE + "，且环境变量未配置");
+            }
+
+            try {
+                prop.load(is);
+
+                // 基本数据库连接配置
+                config.setDriverClassName(prop.getProperty("jdbc.driver"));
+                config.setJdbcUrl(prop.getProperty("jdbc.url"));
+                config.setUsername(prop.getProperty("jdbc.username"));
+                config.setPassword(prop.getProperty("jdbc.password"));
+
+                // 连接池配置
+                config.setPoolName(prop.getProperty("hikari.poolName", "CampusPassPool"));
+                config.setMinimumIdle(Integer.parseInt(prop.getProperty("hikari.minimumIdle", "5")));
+                config.setMaximumPoolSize(Integer.parseInt(prop.getProperty("hikari.maximumPoolSize", "20")));
+                config.setConnectionTimeout(Long.parseLong(prop.getProperty("hikari.connectionTimeout", "30000")));
+                config.setIdleTimeout(Long.parseLong(prop.getProperty("hikari.idleTimeout", "600000")));
+                config.setMaxLifetime(Long.parseLong(prop.getProperty("hikari.maxLifetime", "1800000")));
+                config.setConnectionTestQuery(prop.getProperty("hikari.connectionTestQuery", "SELECT 1"));
+
+                System.out.println("========== 数据库连接池配置信息 ==========");
+                System.out.println("配置来源: " + CONFIG_FILE);
+                System.out.println("驱动: " + prop.getProperty("jdbc.driver"));
+                System.out.println("URL: " + prop.getProperty("jdbc.url"));
+                System.out.println("用户名: " + prop.getProperty("jdbc.username"));
+                System.out.println("连接池名称: " + config.getPoolName());
+                System.out.println("最小空闲连接数: " + config.getMinimumIdle());
+                System.out.println("最大连接池大小: " + config.getMaximumPoolSize());
+                System.out.println("=========================================");
+            } finally {
+                if (is != null) {
+                    is.close();
+                }
             }
         }
+
+        // 创建数据源
+        dataSource = new HikariDataSource(config);
     }
     
     /**
